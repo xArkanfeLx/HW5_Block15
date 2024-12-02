@@ -1,8 +1,10 @@
 package com.example.room
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -12,6 +14,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -19,16 +25,16 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Date
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(),ContactAdapter.ContactClickListener {
 
-    var db: NoteDatabase? = null
+    private lateinit var viewModel: ContactViewModel
 
     private lateinit var toolbarTB: Toolbar
     private lateinit var familyET: EditText
     private lateinit var phoneET: EditText
-    private lateinit var saveBTN: Button
-    private lateinit var textView: TextView
+    private lateinit var recyclerViewRV: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,39 +55,42 @@ class MainActivity : AppCompatActivity() {
 
         familyET = findViewById(R.id.familyET)
         phoneET = findViewById(R.id.phoneET)
-        saveBTN = findViewById(R.id.saveBTN)
-        textView = findViewById(R.id.textView)
-        db = NoteDatabase.getDatabase(this)
-        readDatabase(db!!)
 
-    }
+        recyclerViewRV = findViewById(R.id.recyclerViewRV)
+        recyclerViewRV.layoutManager = LinearLayoutManager(this)
+        val adapter = ContactAdapter(this,this)
+        recyclerViewRV.adapter=adapter
 
-    override fun onResume() {
-        super.onResume()
-        saveBTN.setOnClickListener {
-            val family = familyET.text
-            val phone = phoneET.text
-            if (family.isNotEmpty() && phone.isNotEmpty()) {
-                val note = Note(family.toString(), phone.toString())
-                addNote(db!!, note)
-                readDatabase(db!!)
-                family.clear()
-                phone.clear()
+        viewModel = ViewModelProvider(this,ViewModelProvider.AndroidViewModelFactory
+            .getInstance(application))[ContactViewModel::class.java]
+        viewModel.contacts.observe(this, Observer { list ->
+            list?.let {
+                adapter.updateList(it)
             }
+        })
+
+        adapter.setOnItemClickListener(object:
+            ContactAdapter.OnItemClickListener {
+            override fun onItemClick(contact: Contact, position: Int) {
+                viewModel.deleteContact(contact)
+            }
+        })
+
+    }
+
+    override fun onItemDeleteClicked(contact: Contact) {
+        viewModel.deleteContact(contact)
+    }
+
+    fun saveData(view: View){
+        val family = familyET.text
+        val phone = phoneET.text
+        val date = Date().toString()
+        if (family.isNotEmpty() && phone.isNotEmpty()) {
+            viewModel.insertContact(Contact(family.toString(),phone.toString(),date))
         }
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun addNote(db: NoteDatabase, note: Note) = GlobalScope.async {
-        db.getNoteDao().insert(note)
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun readDatabase(db: NoteDatabase) = GlobalScope.async {
-        delay(10L)
-        textView.text = ""
-        val list = db.getNoteDao().getAllNotes()
-        list.forEach { i -> textView.append("${i.family} : ${i.phone}\n") }
+        family.clear()
+        phone.clear()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

@@ -4,19 +4,19 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.room.Interfaces.NoteDao
+import com.example.room.Interfaces.ContactDao
 
-@Database(entities = [Note::class], version = 1, exportSchema = false)
-abstract class NoteDatabase:RoomDatabase() {
-    abstract fun getNoteDao():NoteDao
+@Database(entities = [Contact::class], version = 1, exportSchema = false)
+abstract class ContactDatabase:RoomDatabase() {
+    abstract fun getContactDao():ContactDao
     companion object {
-        private var  INSTANCE: NoteDatabase?=null
-        fun getDatabase(context: Context) : NoteDatabase {
+        private var  INSTANCE: ContactDatabase?=null
+        fun getDatabase(context: Context) : ContactDatabase {
             return INSTANCE?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    NoteDatabase::class.java,
-                    "note_database"
+                    ContactDatabase::class.java,
+                    "contact_database"
                 ).build()
                 INSTANCE = instance
                 instance
